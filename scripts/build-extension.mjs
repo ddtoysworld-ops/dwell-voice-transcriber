@@ -4,17 +4,17 @@ import process from 'node:process';
 
 const targets = {
   staging: {
-    label: "[TEST] D'WELL 语音转文字",
+    label: "[TEST] D'WELL Voice Transcriber",
     supabaseUrl: 'https://tjcmjsxmlotlwetwifpb.supabase.co',
     publishableKey: 'sb_publishable_q3PeRk9wuyjqIzCEjAcZow_89tloY9d'
   },
   qa: {
-    label: "[QA] D'WELL 语音转文字",
+    label: "[QA] D'WELL Voice Transcriber",
     supabaseUrl: 'https://tjcmjsxmlotlwetwifpb.supabase.co',
     publishableKey: 'sb_publishable_q3PeRk9wuyjqIzCEjAcZow_89tloY9d'
   },
   production: {
-    label: "D'WELL 语音转文字",
+    label: "D'WELL Voice Transcriber",
     supabaseUrl: 'https://osgqzpdfjdnkzmyzitrm.supabase.co',
     publishableKey: 'sb_publishable_IKABC_KIjLNgTbf45AZyFw_zGCFfpI5'
   }

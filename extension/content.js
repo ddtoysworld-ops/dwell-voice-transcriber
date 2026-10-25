@@ -7,14 +7,12 @@
     isClearlyChineseText,
     isFacebookVoiceMessageLabel,
     isUsableAudioSource,
-    isPausedVoicePlaybackLabel,
     isVoicePlaybackLabel,
     userFacingError
   } = globalThis.DwellVoiceCore;
   const MARKER = 'data-dwell-voice-ready';
   const WHATSAPP_MESSAGE_SELECTOR = '[data-testid^="conv-msg-"], div[role="row"], div[data-id]';
-  const WHATSAPP_VOICE_HINT_SELECTOR = '[data-icon="ptt-status"], [aria-label*="voice message" i], [aria-label*="voice note" i], [aria-label*="语音"], [aria-label*="語音"]';
-  const WHATSAPP_SCAN_SELECTOR = `${WHATSAPP_VOICE_HINT_SELECTOR}, [role="slider"]`;
+  const WHATSAPP_VOICE_HINT_SELECTOR = '[data-icon="ptt-status"], [aria-label*="voice message" i], [aria-label*="voice note" i]';
   const FACEBOOK_VOICE_SELECTOR = '[aria-label="Voice Message" i]';
   const hostname = location.hostname.toLowerCase();
   const isFixturePage = hostname === '127.0.0.1' || hostname === 'localhost';
@@ -62,7 +60,7 @@
 
   function messageSide(target) {
     const bubble = target.querySelector?.('[data-testid="msg-container"]') ||
-      target.querySelector?.(WHATSAPP_VOICE_HINT_SELECTOR) || target.querySelector?.('[role="slider"]');
+      target.querySelector?.(WHATSAPP_VOICE_HINT_SELECTOR);
     const messageRect = target.getBoundingClientRect?.();
     const bubbleRect = bubble?.getBoundingClientRect?.();
     if (!messageRect || !bubbleRect) return 'incoming';
@@ -152,10 +150,10 @@
     if (nested && isUsableAudioSource(sourceFor(nested))) return nested;
     if (target.querySelector?.(FACEBOOK_VOICE_SELECTOR)) return null;
 
-    const slider = target.querySelector('[role="slider"]');
+    const slider = target.querySelector('[role="slider"][aria-label="Voice note progress slider"]');
     const playback = whatsappTransportFor(target);
     const isCurrentMessage = Number(slider?.getAttribute('aria-valuenow') || 0) > 0 ||
-      isPausedVoicePlaybackLabel(playback?.getAttribute('aria-label'));
+      isVoicePlaybackLabel(playback?.getAttribute('aria-label')) && /^pause/i.test(playback.getAttribute('aria-label'));
 
     const ready = Array.from(document.querySelectorAll('audio')).filter((audio) =>
       isUsableAudioSource(sourceFor(audio))
@@ -408,7 +406,7 @@
 
     if (prepared.kind === 'buffer') {
       const label = playback.getAttribute('aria-label');
-      if (isPausedVoicePlaybackLabel(label)) playback.click();
+      if (/^pause voice message$/i.test(label || '')) playback.click();
       return {
         blob: new Blob([prepared.audioBuffer], { type: prepared.mimeType }),
         fileName: prepared.fileName,
@@ -424,7 +422,7 @@
     const previousMuted = audio.muted;
     audio.muted = true;
     const label = playback.getAttribute('aria-label');
-    if (isPausedVoicePlaybackLabel(label)) playback.click();
+    if (/^pause voice message$/i.test(label || '')) playback.click();
     else audio.pause();
     return {
       audio,
@@ -700,13 +698,7 @@
 
   function isWhatsAppVoiceMessage(element) {
     if (!element.matches?.(WHATSAPP_MESSAGE_SELECTOR)) return false;
-    const hint = element.querySelector(WHATSAPP_VOICE_HINT_SELECTOR);
-    const slider = element.querySelector('[role="slider"]');
-    if (!hint && (!slider || element.querySelector('video'))) return false;
-    const playback = whatsappTransportFor(element);
-    if (!playback) return false;
-    const label = playback.getAttribute('aria-label') || '';
-    return !/video|视频|影片/i.test(label);
+    return Boolean(element.querySelector(WHATSAPP_VOICE_HINT_SELECTOR) && whatsappTransportFor(element));
   }
 
   function facebookVoiceGroup(element) {
@@ -725,7 +717,7 @@
     if (isWhatsAppPage && isWhatsAppVoiceMessage(root)) attach(root);
 
     if (isWhatsAppPage) {
-      root.querySelectorAll?.(WHATSAPP_SCAN_SELECTOR).forEach((hint) => {
+      root.querySelectorAll?.(WHATSAPP_VOICE_HINT_SELECTOR).forEach((hint) => {
         const message = hint.closest('div[role="row"]') ||
           hint.closest('[data-testid^="conv-msg-"]') || hint.closest('div[data-id]');
         if (message && isWhatsAppVoiceMessage(message)) attach(message);

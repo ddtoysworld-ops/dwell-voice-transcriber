@@ -41,7 +41,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "D'WELL 语音转文字" }; },
+        getManifest() { return { name: "D'WELL Voice Transcriber" }; },
         sendMessage(_message, callback) {
           callback({ ok: true, data: { signedIn: false, user: null } });
         }
@@ -63,7 +63,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "D'WELL 语音转文字" }; },
+        getManifest() { return { name: "D'WELL Voice Transcriber" }; },
         sendMessage(message, callback) {
           if (message.type === 'VOICE_PROBE_MESSENGER_RANGE') {
             callback({ ok: true, data: {
@@ -165,7 +165,7 @@ try {
   assert.equal(await chatPage.evaluate(() => window.networkRequests), 1);
   const requestsBeforeDiagnosticMode = await chatPage.evaluate(() => window.voiceRequests);
   await chatPage.evaluate(() => {
-    chrome.runtime.getManifest = () => ({ name: "[TEST] D'WELL 语音转文字" });
+    chrome.runtime.getManifest = () => ({ name: "[TEST] D'WELL Voice Transcriber" });
   });
   await chatPage.locator('.dwell-voice-transcribe').nth(4).click();
   await chatPage.waitForTimeout(1600);
@@ -225,7 +225,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "[QA] D'WELL 语音转文字" }; },
+        getManifest() { return { name: "[QA] D'WELL Voice Transcriber" }; },
         sendMessage(message, callback) {
           if (message.type === 'VOICE_FETCH_MESSENGER_AUDIO') {
             window.audioSources = [...(window.audioSources || []), message.sourceUrl];
@@ -323,7 +323,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "[QA] D'WELL 语音转文字" }; },
+        getManifest() { return { name: "[QA] D'WELL Voice Transcriber" }; },
         sendMessage(message, callback) {
           if (message.type !== 'VOICE_TRANSCRIBE') {
             callback({ ok: false, error: { code: 'UNEXPECTED' } });
@@ -351,36 +351,6 @@ try {
     body.scrollWidth <= document.documentElement.clientWidth), true);
   console.log('WhatsApp batch transcription passed.');
 
-  await whatsappBatchPage.evaluate(() => {
-    document.querySelector('main').insertAdjacentHTML('beforeend', `
-      <div role="row" data-id="voice-zh" class="message">
-        <div data-testid="msg-container">
-          <button type="button" aria-label="播放语音消息">播放</button>
-          <div role="slider" aria-label="语音消息进度" aria-valuenow="0"></div>
-        </div>
-      </div>
-      <div role="row" data-id="voice-unlabelled" class="message">
-        <div data-testid="msg-container">
-          <button type="button" aria-label="播放">播放</button>
-          <div role="slider" aria-label="播放进度" aria-valuenow="0"></div>
-        </div>
-      </div>
-      <div role="row" data-id="video" class="message">
-        <div data-testid="msg-container">
-          <video></video>
-          <button type="button" aria-label="播放视频">播放</button>
-          <div role="slider" aria-label="视频进度" aria-valuenow="0"></div>
-        </div>
-      </div>
-    `);
-  });
-  await whatsappBatchPage.locator('[data-id="voice-zh"] .dwell-voice-panel').waitFor();
-  await whatsappBatchPage.locator('[data-id="voice-unlabelled"] .dwell-voice-panel').waitFor();
-  assert.equal(await whatsappBatchPage.locator('[data-id="video"] .dwell-voice-panel').count(), 0);
-  assert.equal(await whatsappBatchPage.locator('.dwell-voice-panel').count(), 4);
-  await whatsappBatchPage.screenshot({ path: fileURLToPath(new URL('whatsapp-localized.png', outputDir)), fullPage: true });
-  console.log('Localized WhatsApp voice detection passed.');
-
   const diagnosticPage = await browser.newPage({ viewport: { width: 420, height: 720 } });
   diagnosticPage.setDefaultTimeout(10000);
   await diagnosticPage.addInitScript(() => {
@@ -392,7 +362,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "[TEST] D'WELL 语音转文字" }; },
+        getManifest() { return { name: "[TEST] D'WELL Voice Transcriber" }; },
         sendMessage(message, callback) {
           if (message.type === 'VOICE_START_NETWORK_DIAGNOSTIC') {
             window.setTimeout(() => callback({ ok: true, data: { durationMs: 900 } }), 120);

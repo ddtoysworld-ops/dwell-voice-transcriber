@@ -1,31 +1,33 @@
-# D'WELL 语音转文字插件
+# D'WELL Voice Transcriber
 
-这是独立的 Chrome 插件，可将 WhatsApp Web 和 Meta Business Suite 中的语音消息转成文字；非中文语音会同时显示中文翻译。它不会代替现有的 D'WELL CRM 插件。
+Independent Chrome extension for transcribing WhatsApp Web and Meta Business Suite voice messages. Audio is sent to an authenticated Supabase Edge Function, forwarded to OpenAI, and discarded after the response.
 
-## 客服下载安装
+## Packages and service
 
-1. 打开本仓库的 [版本发布页](https://github.com/ddtoysworld-ops/dwell-voice-transcriber/releases)，选择 **v0.1.1**。
-2. 在“Assets”下载 **`dwell-voice-transcriber-0.1.1-production.zip`**。不要下载 GitHub 自动生成的 `Source code (zip)`、旧版 `0.1.0` 或测试包。
-3. 解压 ZIP。Chrome 打开 `chrome://extensions`，开启右上角“开发者模式”，点击“加载已解压的扩展程序”，选择解压后的 **`production-0.1.1`** 文件夹（里面应直接看到 `manifest.json`）。
-4. 点击插件图标，使用自己的正式客服账号登录。打开 WhatsApp Web 或 Meta Business Suite，并刷新聊天页面；语音下方会出现“转成文字”。
-5. 若该浏览器装过旧版，请先移除或关闭旧版插件，避免重复按钮。更新已加载的文件夹后，也要在 `chrome://extensions` 点击插件的“重新加载”，再刷新聊天页面。
+- `output/qa-0.1.0/` connects to the isolated Supabase test project. It is for acceptance testing only.
+- `output/production-0.1.0/` connects to the official Supabase project. Load this directory as an unpacked Chrome extension for staff use.
+- `release/dwell-voice-transcriber-0.1.0-production.zip` is the accepted production archive published with this repository. Extract it before using Chrome's `Load unpacked` action.
+- The `dwell-voice-transcribe` Edge Function is deployed separately in both projects. Each project needs its own `OPENAI_API_KEY` Edge Function secret; no OpenAI key belongs in the extension.
+- The extension authenticates staff through the selected project's Supabase Auth before sending audio. It does not save audio in a database or send chat messages.
+- Default transcription model: `gpt-4o-mini-transcribe`.
+- The existing D'WELL CRM extension is unchanged.
 
-批量转写只处理当前聊天已加载的语音；更早的消息需要先滚动加载。转写结果可展开、收起和复制。
-
-## 隐私与权限
-
-插件通过正式 Supabase 项目 `osgqzpdfjdnkzmyzitrm` 验证客服身份。语音经已登录的 Edge Function 发往 OpenAI 处理；插件不会将语音存入数据库，也不会自动发送聊天消息。OpenAI 密钥只保存在正式项目的 Edge Functions Secrets，**不在安装包、源码或客服电脑内**。请勿在截图、聊天或 GitHub 中公开密钥与顾客语音。
-
-## 开发与验证
-
-`extension/` 是源码，不是正式安装目录；其默认配置并非正式项目。正式包由 `npm run build:production` 生成，测试包由 `npm run build:qa` 生成。提交或发布前运行：
+## Local checks
 
 ```powershell
 npm test
 npm run check
-node tests/ui-smoke.mjs
-node tests/package-smoke.mjs
 ```
 
-正式项目和隔离测试项目各自需要部署 `dwell-voice-transcribe`，并分别设置 `OPENAI_API_KEY`。不要把测试包交给客服使用。
+## Production setup
+
+1. In official Supabase project `osgqzpdfjdnkzmyzitrm`, open Edge Functions > Secrets and save `OPENAI_API_KEY` from an OpenAI Platform project with available API credit.
+2. Confirm `dwell-voice-transcribe` is active in that same project. The test project's secret does not apply to production.
+3. Build with `npm run build:production`, then load `output/production-0.1.0/` through Chrome's `Load unpacked` action. Do not load `extension/` directly: its checked-in config is not the production build.
+4. Sign in using an official D'WELL staff account. Test a short, non-customer voice message on both WhatsApp Web and Messenger before distributing to staff.
+5. For an update to an already-loaded directory, click `Reload` in `chrome://extensions` and refresh the chat page.
+
+Disable the QA extension before enabling the production extension; otherwise both content scripts can add controls to the same chat. The production extension has separate Chrome storage, so sign in again after switching.
+
+The batch button handles voice messages currently loaded in the conversation, in order, and skips completed transcripts. It cannot process older messages that the site has not loaded yet. Never put the OpenAI key in the package, a screenshot, a chat message, or source control.
 

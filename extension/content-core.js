@@ -35,15 +35,7 @@
   }
 
   function isVoicePlaybackLabel(value = '') {
-    const label = String(value).trim();
-    return /^(?:play|pause) voice message$/i.test(label) ||
-      /^(?:播放|暂停|暫停|继续|繼續).*(?:语音|語音)/.test(label);
-  }
-
-  function isPausedVoicePlaybackLabel(value = '') {
-    const label = String(value).trim();
-    return /^pause voice message$/i.test(label) ||
-      /^(?:暂停|暫停).*(?:语音|語音)/.test(label);
+    return /^(?:play|pause) voice message$/i.test(String(value).trim());
   }
 
   function isFacebookVoiceMessageLabel(value = '') {
@@ -117,7 +109,6 @@
     fileNameForAudio,
     isUsableAudioSource,
     isVoicePlaybackLabel,
-    isPausedVoicePlaybackLabel,
     isFacebookVoiceMessageLabel,
     isClearlyChineseText,
     diagnoseCapture,

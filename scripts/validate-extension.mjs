@@ -7,7 +7,7 @@ const extension = resolve(root, 'extension');
 const manifest = JSON.parse(await readFile(resolve(extension, 'manifest.json'), 'utf8'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '0.1.1');
+assert.equal(manifest.version, '0.1.0');
 assert(!JSON.stringify(manifest).includes('OPENAI_API_KEY'));
 assert(!manifest.permissions.includes('tabs'));
 assert(!manifest.permissions.includes('tabCapture'));
