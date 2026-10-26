@@ -2,9 +2,11 @@
 
 这是独立的 Chrome 插件，可将 WhatsApp Web 和 Meta Business Suite 中的语音消息转成文字；非中文语音会同时显示中文翻译。它不会代替现有的 D'WELL CRM 插件。
 
+**[点击下载正式版 v0.1.3 ZIP](https://github.com/ddtoysworld-ops/dwell-voice-transcriber/raw/refs/heads/main/release/dwell-voice-transcriber-0.1.3-production.zip)**
+
 ## 客服下载安装
 
-1. 下载本仓库 `release/` 文件夹里的 **`dwell-voice-transcriber-0.1.3-production.zip`**。不要下载 GitHub 自动生成的 `Source code (zip)`、旧版或测试包。
+1. 点击上面的“下载正式版”链接。不要点绿色 `Code` 菜单里的 `Download ZIP`，那是源码，不是安装包。
 2. 解压 ZIP。Chrome 打开 `chrome://extensions`，开启右上角“开发者模式”，点击“加载已解压的扩展程序”，选择解压后的 **`production-0.1.3`** 文件夹（里面应直接看到 `manifest.json`）。
 3. 若该浏览器装过旧版，请先移除或关闭旧版插件，避免重复按钮。
 4. 点击插件图标，使用自己的正式客服账号登录。打开 WhatsApp Web 或 Meta Business Suite，并刷新聊天页面；语音下方会出现“转成文字”。
