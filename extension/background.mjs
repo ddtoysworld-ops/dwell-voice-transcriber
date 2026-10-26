@@ -1,6 +1,7 @@
 import { config } from './config.mjs';
 import { fetchMessengerAudio, isAllowedMessengerAudioUrl, probeMessengerRange } from './remote-audio.mjs';
 import { createNetworkDiagnostic } from './network-diagnostic.mjs';
+import { normalizeAdtsAudio } from './audio-normalize.mjs';
 
 const SESSION_KEY = 'dwellVoiceSession';
 const networkDiagnostic = config.networkDiagnostic && chrome.webRequest
@@ -114,8 +115,14 @@ async function transcribeAudio(message) {
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
   if (bytes.byteLength !== Number(message.audioByteLength)) throw new Error('Audio payload is incomplete');
 
+  const normalized = await normalizeAdtsAudio(bytes, config.maxAudioBytes);
+  const upload = normalized || {
+    bytes,
+    mimeType: message.mimeType || 'audio/webm',
+    fileName: message.fileName || 'voice-message.webm'
+  };
   const form = new FormData();
-  form.append('file', new Blob([bytes], { type: message.mimeType || 'audio/webm' }), message.fileName || 'voice-message.webm');
+  form.append('file', new Blob([upload.bytes], { type: upload.mimeType }), upload.fileName);
   form.append('translate_to_zh', 'true');
 
   const response = await fetch(`${config.supabaseUrl}/functions/v1/${config.functionName}`, {
@@ -130,6 +137,9 @@ async function transcribeAudio(message) {
   if (!response.ok) {
     const error = new Error(payload.error || payload.message || `转写服务错误 (${response.status})`);
     error.code = payload.code || (response.status === 401 ? 'AUTH_REQUIRED' : 'TRANSCRIBE_FAILED');
+    if (/^[a-f0-9-]{36}$/i.test(payload.diagnosticId || '')) {
+      error.diagnosticData = { diagnosticId: payload.diagnosticId };
+    }
     throw error;
   }
   return payload;

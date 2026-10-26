@@ -41,7 +41,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "D'WELL Voice Transcriber" }; },
+        getManifest() { return { name: "D'WELL 语音转文字" }; },
         sendMessage(_message, callback) {
           callback({ ok: true, data: { signedIn: false, user: null } });
         }
@@ -63,7 +63,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "D'WELL Voice Transcriber" }; },
+        getManifest() { return { name: "D'WELL 语音转文字" }; },
         sendMessage(message, callback) {
           if (message.type === 'VOICE_PROBE_MESSENGER_RANGE') {
             callback({ ok: true, data: {
@@ -165,7 +165,7 @@ try {
   assert.equal(await chatPage.evaluate(() => window.networkRequests), 1);
   const requestsBeforeDiagnosticMode = await chatPage.evaluate(() => window.voiceRequests);
   await chatPage.evaluate(() => {
-    chrome.runtime.getManifest = () => ({ name: "[TEST] D'WELL Voice Transcriber" });
+    chrome.runtime.getManifest = () => ({ name: "[TEST] D'WELL 语音转文字" });
   });
   await chatPage.locator('.dwell-voice-transcribe').nth(4).click();
   await chatPage.waitForTimeout(1600);
@@ -173,7 +173,10 @@ try {
   assert.equal(await chatPage.evaluate(() => window.voiceRequests), requestsBeforeDiagnosticMode);
   const requestsBeforeFailure = await chatPage.evaluate(() => window.voiceRequests);
   await chatPage.locator('.dwell-voice-transcribe').last().click();
-  await chatPage.waitForTimeout(7400);
+  await chatPage.locator('.dwell-voice-panel').last().locator('.dwell-voice-status')
+    .getByText(/请点这条语音的播放键一次/).waitFor();
+  await chatPage.locator('.dwell-voice-panel').last().locator('.dwell-voice-status')
+    .getByText(/读取失败 M1/).waitFor({ timeout: 18000 });
   assert.equal(await chatPage.locator('.dwell-voice-panel').last().getAttribute('data-state'), 'error');
   assert.match(await chatPage.locator('.dwell-voice-status').last().innerText(), /M1/);
   assert.equal(await chatPage.locator('.dwell-voice-panel').last().locator('.dwell-voice-diagnostic').isVisible(), true);
@@ -225,7 +228,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "[QA] D'WELL Voice Transcriber" }; },
+        getManifest() { return { name: "[QA] D'WELL 语音转文字" }; },
         sendMessage(message, callback) {
           if (message.type === 'VOICE_FETCH_MESSENGER_AUDIO') {
             window.audioSources = [...(window.audioSources || []), message.sourceUrl];
@@ -312,6 +315,17 @@ try {
   assert.match(await adjacentPage.locator('.dwell-voice-panel').nth(1).innerText(), /Lower voice only/);
   assert.equal(await adjacentPage.evaluate(() => window.transcribeRequests), 2);
   assert.equal(await adjacentPage.locator('.dwell-voice-batch').isDisabled(), true);
+  await adjacentPage.reload();
+  await adjacentPage.evaluate(() => { window.requireTrustedUpper = true; });
+  await adjacentPage.locator('.dwell-voice-transcribe').first().click();
+  await adjacentPage.locator('.dwell-voice-panel').first().locator('.dwell-voice-status')
+    .getByText('请点这条语音的播放键一次').waitFor();
+  assert.equal(await adjacentPage.evaluate(() => window.transcribeRequests || 0), 0);
+  await adjacentPage.locator('[data-voice="upper"]').click();
+  await adjacentPage.locator('.dwell-voice-panel').first().locator('.dwell-voice-status')
+    .getByText('已完成').waitFor();
+  assert.match(await adjacentPage.locator('.dwell-voice-panel').first().innerText(), /Upper voice only/);
+  assert.equal(await adjacentPage.evaluate(() => window.transcribeRequests), 1);
   await adjacentPage.screenshot({ path: fileURLToPath(new URL('adjacent-batch.png', outputDir)), fullPage: true });
   assert.equal(await adjacentPage.locator('body').evaluate((body) =>
     body.scrollWidth <= document.documentElement.clientWidth), true);
@@ -323,7 +337,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "[QA] D'WELL Voice Transcriber" }; },
+        getManifest() { return { name: "[QA] D'WELL 语音转文字" }; },
         sendMessage(message, callback) {
           if (message.type !== 'VOICE_TRANSCRIBE') {
             callback({ ok: false, error: { code: 'UNEXPECTED' } });
@@ -351,6 +365,36 @@ try {
     body.scrollWidth <= document.documentElement.clientWidth), true);
   console.log('WhatsApp batch transcription passed.');
 
+  await whatsappBatchPage.evaluate(() => {
+    document.querySelector('main').insertAdjacentHTML('beforeend', `
+      <div role="row" data-id="voice-zh" class="message">
+        <div data-testid="msg-container">
+          <button type="button" aria-label="播放语音消息">播放</button>
+          <div role="slider" aria-label="语音消息进度" aria-valuenow="0"></div>
+        </div>
+      </div>
+      <div role="row" data-id="voice-unlabelled" class="message">
+        <div data-testid="msg-container">
+          <button type="button" aria-label="播放">播放</button>
+          <div role="slider" aria-label="播放进度" aria-valuenow="0"></div>
+        </div>
+      </div>
+      <div role="row" data-id="video" class="message">
+        <div data-testid="msg-container">
+          <video></video>
+          <button type="button" aria-label="播放视频">播放</button>
+          <div role="slider" aria-label="视频进度" aria-valuenow="0"></div>
+        </div>
+      </div>
+    `);
+  });
+  await whatsappBatchPage.locator('[data-id="voice-zh"] .dwell-voice-panel').waitFor();
+  await whatsappBatchPage.locator('[data-id="voice-unlabelled"] .dwell-voice-panel').waitFor();
+  assert.equal(await whatsappBatchPage.locator('[data-id="video"] .dwell-voice-panel').count(), 0);
+  assert.equal(await whatsappBatchPage.locator('.dwell-voice-panel').count(), 4);
+  await whatsappBatchPage.screenshot({ path: fileURLToPath(new URL('whatsapp-localized.png', outputDir)), fullPage: true });
+  console.log('Localized WhatsApp voice detection passed.');
+
   const diagnosticPage = await browser.newPage({ viewport: { width: 420, height: 720 } });
   diagnosticPage.setDefaultTimeout(10000);
   await diagnosticPage.addInitScript(() => {
@@ -362,7 +406,7 @@ try {
     globalThis.chrome = {
       runtime: {
         lastError: null,
-        getManifest() { return { name: "[TEST] D'WELL Voice Transcriber" }; },
+        getManifest() { return { name: "[TEST] D'WELL 语音转文字" }; },
         sendMessage(message, callback) {
           if (message.type === 'VOICE_START_NETWORK_DIAGNOSTIC') {
             window.setTimeout(() => callback({ ok: true, data: { durationMs: 900 } }), 120);

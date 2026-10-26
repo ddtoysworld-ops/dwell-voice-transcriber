@@ -1,4 +1,4 @@
-import { isChineseLanguage, isClearlyChineseText, outputTextFromResponse, publicError } from './logic.mjs';
+import { isChineseLanguage, isClearlyChineseText, outputTextFromResponse, providerDiagnostic, publicError, shouldRetryLegacyTranscription } from './logic.mjs';
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
 const ALLOWED_MIME_PREFIX = 'audio/';
@@ -57,6 +57,16 @@ async function openAiJson(url: string, init: RequestInit) {
   return { response, payload };
 }
 
+async function transcribe(file: File, model: string) {
+  const body = new FormData();
+  body.append('file', file, file.name || 'voice-message.webm');
+  body.append('model', model);
+  body.append('response_format', 'json');
+  return openAiJson('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST', body
+  });
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(request) });
   if (request.method !== 'POST') return json(request, { code: 'METHOD_NOT_ALLOWED', error: '只接受 POST 请求。' }, 405);
@@ -80,17 +90,19 @@ Deno.serve(async (request: Request) => {
     return json(request, { code: 'INVALID_AUDIO_TYPE', error: '不支持这个语音格式。' }, 415);
   }
 
-  const transcriptionBody = new FormData();
-  transcriptionBody.append('file', file, file.name || 'voice-message.webm');
-  transcriptionBody.append('model', Deno.env.get('OPENAI_TRANSCRIBE_MODEL') || 'gpt-4o-mini-transcribe');
+  const diagnosticId = crypto.randomUUID();
 
-  const transcription = await openAiJson('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    body: transcriptionBody
-  });
+  let transcriptionModel = 'gpt-transcribe';
+  let transcription = await transcribe(file, transcriptionModel);
+  if (!transcription.response.ok && shouldRetryLegacyTranscription(transcription.response.status, transcription.payload)) {
+    transcriptionModel = 'gpt-4o-mini-transcribe';
+    transcription = await transcribe(file, transcriptionModel);
+  }
   if (!transcription.response.ok) {
     const error = publicError(transcription.response.status, transcription.payload);
-    return json(request, error, error.status);
+    console.warn(JSON.stringify(providerDiagnostic('transcription', transcription.response.status,
+      transcription.payload, diagnosticId, file)));
+    return json(request, { ...error, diagnosticId }, error.status);
   }
 
   const transcript = String(transcription.payload.text || '').trim();
@@ -112,7 +124,9 @@ Deno.serve(async (request: Request) => {
     });
     if (!translation.response.ok) {
       const error = publicError(translation.response.status, translation.payload);
-      return json(request, error, error.status);
+      console.warn(JSON.stringify(providerDiagnostic('translation', translation.response.status,
+        translation.payload, diagnosticId)));
+      return json(request, { ...error, diagnosticId }, error.status);
     }
     translationZh = outputTextFromResponse(translation.payload);
   }
@@ -121,6 +135,7 @@ Deno.serve(async (request: Request) => {
     transcript,
     language: language || null,
     translation_zh: translationZh || null,
+    transcription_model: transcriptionModel,
     audio_saved: false
   });
 });

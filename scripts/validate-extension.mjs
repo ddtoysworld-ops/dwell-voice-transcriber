@@ -7,7 +7,7 @@ const extension = resolve(root, 'extension');
 const manifest = JSON.parse(await readFile(resolve(extension, 'manifest.json'), 'utf8'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '0.1.0');
+assert.equal(manifest.version, '0.1.3');
 assert(!JSON.stringify(manifest).includes('OPENAI_API_KEY'));
 assert(!manifest.permissions.includes('tabs'));
 assert(!manifest.permissions.includes('tabCapture'));
@@ -28,7 +28,7 @@ const files = new Set([
 
 for (const file of files) await access(resolve(extension, file));
 
-const sourceFiles = ['background.mjs', 'config.mjs', 'content-core.js', 'content.js', 'main-bridge.js', 'network-diagnostic.mjs', 'remote-audio.mjs', 'popup.mjs'];
+const sourceFiles = ['audio-normalize.mjs', 'background.mjs', 'config.mjs', 'content-core.js', 'content.js', 'main-bridge.js', 'network-diagnostic.mjs', 'remote-audio.mjs', 'popup.mjs'];
 for (const file of sourceFiles) {
   const source = await readFile(resolve(extension, file), 'utf8');
   assert(!/sk-(?:proj-)?[A-Za-z0-9_-]{16,}/.test(source), `${file} contains a secret-looking value`);

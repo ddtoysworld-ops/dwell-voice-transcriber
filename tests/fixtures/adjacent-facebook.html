@@ -34,6 +34,7 @@
       if (!control) return;
       event.preventDefault();
       let voice = control.dataset.voice;
+      if (voice === 'upper' && window.requireTrustedUpper && !event.isTrusted) return;
       if (voice === 'upper' && (window.staleFirstUpper || window.alwaysStaleUpper)) {
         window.staleFirstUpper = false;
         voice = 'lower';

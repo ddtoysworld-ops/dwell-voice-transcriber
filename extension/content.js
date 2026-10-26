@@ -7,12 +7,14 @@
     isClearlyChineseText,
     isFacebookVoiceMessageLabel,
     isUsableAudioSource,
+    isPausedVoicePlaybackLabel,
     isVoicePlaybackLabel,
     userFacingError
   } = globalThis.DwellVoiceCore;
   const MARKER = 'data-dwell-voice-ready';
   const WHATSAPP_MESSAGE_SELECTOR = '[data-testid^="conv-msg-"], div[role="row"], div[data-id]';
-  const WHATSAPP_VOICE_HINT_SELECTOR = '[data-icon="ptt-status"], [aria-label*="voice message" i], [aria-label*="voice note" i]';
+  const WHATSAPP_VOICE_HINT_SELECTOR = '[data-icon="ptt-status"], [aria-label*="voice message" i], [aria-label*="voice note" i], [aria-label*="语音"], [aria-label*="語音"]';
+  const WHATSAPP_SCAN_SELECTOR = `${WHATSAPP_VOICE_HINT_SELECTOR}, [role="slider"]`;
   const FACEBOOK_VOICE_SELECTOR = '[aria-label="Voice Message" i]';
   const hostname = location.hostname.toLowerCase();
   const isFixturePage = hostname === '127.0.0.1' || hostname === 'localhost';
@@ -60,7 +62,7 @@
 
   function messageSide(target) {
     const bubble = target.querySelector?.('[data-testid="msg-container"]') ||
-      target.querySelector?.(WHATSAPP_VOICE_HINT_SELECTOR);
+      target.querySelector?.(WHATSAPP_VOICE_HINT_SELECTOR) || target.querySelector?.('[role="slider"]');
     const messageRect = target.getBoundingClientRect?.();
     const bubbleRect = bubble?.getBoundingClientRect?.();
     if (!messageRect || !bubbleRect) return 'incoming';
@@ -150,10 +152,10 @@
     if (nested && isUsableAudioSource(sourceFor(nested))) return nested;
     if (target.querySelector?.(FACEBOOK_VOICE_SELECTOR)) return null;
 
-    const slider = target.querySelector('[role="slider"][aria-label="Voice note progress slider"]');
+    const slider = target.querySelector('[role="slider"]');
     const playback = whatsappTransportFor(target);
     const isCurrentMessage = Number(slider?.getAttribute('aria-valuenow') || 0) > 0 ||
-      isVoicePlaybackLabel(playback?.getAttribute('aria-label')) && /^pause/i.test(playback.getAttribute('aria-label'));
+      isPausedVoicePlaybackLabel(playback?.getAttribute('aria-label'));
 
     const ready = Array.from(document.querySelectorAll('audio')).filter((audio) =>
       isUsableAudioSource(sourceFor(audio))
@@ -250,7 +252,7 @@
     }
   }
 
-  function startBridgeCapture(diagnosticOnly = false) {
+  function startBridgeCapture(diagnosticOnly = false, timeoutMs = diagnosticOnly ? 13000 : 6500) {
     const requestId = crypto.randomUUID();
     let resultResolve;
     let resultReject;
@@ -265,7 +267,7 @@
       if (!diagnosticOnly) {
         resultReject(Object.assign(new Error('Audio source is not ready'), { code: 'AUDIO_NOT_READY' }));
       }
-    }, diagnosticOnly ? 13000 : 6500);
+    }, timeoutMs);
 
     function onMessage(event) {
       const data = event.data;
@@ -318,12 +320,12 @@
     }
 
     window.addEventListener('message', onMessage);
-    window.postMessage({ source: 'dwell-voice-content', type: diagnosticOnly ? 'observe' : 'arm', requestId }, '*');
+    window.postMessage({ source: 'dwell-voice-content', type: diagnosticOnly ? 'observe' : 'arm', requestId, timeoutMs }, '*');
     return { armed, result, cancel, probe };
   }
 
-  async function waitForPreparedAudio(target, before) {
-    for (let attempt = 0; attempt < 80; attempt += 1) {
+  async function waitForPreparedAudio(target, before, attempts = 80) {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
       const audio = preparedAudioFor(target, before);
       if (audio) return audio;
       await new Promise((resolve) => window.setTimeout(resolve, 50));
@@ -331,7 +333,7 @@
     return null;
   }
 
-  async function prepareAudio(target) {
+  async function prepareAudio(target, onAwaitClick) {
     const existing = sourceAudioFor(target);
     if (existing) return { audio: existing, restore: () => {} };
 
@@ -351,6 +353,7 @@
           selected: candidate === playback,
           tag: candidate.tagName,
           role: candidate.getAttribute('role') || '',
+          ariaHidden: Boolean(candidate.closest('[aria-hidden="true"]')),
           width: Math.round(candidate.getBoundingClientRect().width),
           height: Math.round(candidate.getBoundingClientRect().height),
           nestedInteractive: candidate.querySelectorAll('button, a, [role="button"]').length
@@ -358,10 +361,21 @@
     } : null;
 
     const before = new Set(document.querySelectorAll('audio'));
-    const bridge = startBridgeCapture();
+    const manualFallback = isFacebookPage && typeof onAwaitClick === 'function';
+    const bridge = startBridgeCapture(false, manualFallback ? 15000 : 6500);
     let prepared;
     let clicked = false;
     let armed = false;
+    let promptTimer;
+    let wrongVoiceReject;
+    const wrongVoice = manualFallback ? new Promise((_, reject) => { wrongVoiceReject = reject; }) : null;
+    const onTrustedVoiceClick = (event) => {
+      if (!event.isTrusted || !event.target.closest?.(FACEBOOK_VOICE_SELECTOR) || target.contains(event.target)) return;
+      bridge.cancel();
+      wrongVoiceReject(Object.assign(new Error('请只点击当前这条语音的播放键。'), {
+        code: 'AUDIO_ASSOCIATION_UNCERTAIN'
+      }));
+    };
     try {
       await Promise.race([
         bridge.armed,
@@ -369,13 +383,16 @@
           reject(Object.assign(new Error('Page hook is not active'), { code: 'AUDIO_NOT_READY' })), 800))
       ]);
       armed = true;
+      if (manualFallback) document.addEventListener('click', onTrustedVoiceClick, true);
       pressPlayback(playback);
       clicked = true;
+      if (manualFallback) promptTimer = window.setTimeout(onAwaitClick, 1200);
       prepared = await Promise.race([
-        waitForPreparedAudio(target, before).then((audio) => audio
+        waitForPreparedAudio(target, before, manualFallback ? 300 : 80).then((audio) => audio
           ? { kind: 'element', audio }
           : new Promise(() => {})),
-        bridge.result.then((capture) => ({ kind: capture.sourceUrl ? 'url' : 'buffer', ...capture }))
+        bridge.result.then((capture) => ({ kind: capture.sourceUrl ? 'url' : 'buffer', ...capture })),
+        ...(wrongVoice ? [wrongVoice] : [])
       ]);
     } catch (error) {
       if (isFacebookPage && error?.code === 'AUDIO_NOT_READY') {
@@ -399,6 +416,8 @@
       }
       throw error;
     } finally {
+      window.clearTimeout(promptTimer);
+      if (manualFallback) document.removeEventListener('click', onTrustedVoiceClick, true);
       if (clicked && prepared) await new Promise((resolve) => window.setTimeout(resolve, 1200));
       bridge.cancel();
     }
@@ -406,7 +425,7 @@
 
     if (prepared.kind === 'buffer') {
       const label = playback.getAttribute('aria-label');
-      if (/^pause voice message$/i.test(label || '')) playback.click();
+      if (isPausedVoicePlaybackLabel(label)) playback.click();
       return {
         blob: new Blob([prepared.audioBuffer], { type: prepared.mimeType }),
         fileName: prepared.fileName,
@@ -422,7 +441,7 @@
     const previousMuted = audio.muted;
     audio.muted = true;
     const label = playback.getAttribute('aria-label');
-    if (/^pause voice message$/i.test(label || '')) playback.click();
+    if (isPausedVoicePlaybackLabel(label)) playback.click();
     else audio.pause();
     return {
       audio,
@@ -430,8 +449,8 @@
     };
   }
 
-  async function readAudio(target) {
-    const prepared = await prepareAudio(target);
+  async function readAudio(target, onAwaitClick) {
+    const prepared = await prepareAudio(target, onAwaitClick);
     try {
       const { audio } = prepared;
       let blob = prepared.blob;
@@ -491,9 +510,9 @@
     return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 
-  async function uniqueAudioFor(target) {
+  async function uniqueAudioFor(target, onAwaitClick) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const payload = await readAudio(target);
+      const payload = await readAudio(target, onAwaitClick);
       if (!target.querySelector?.(FACEBOOK_VOICE_SELECTOR)) return payload;
       const fingerprint = await audioFingerprint(payload);
       const owner = recognizedAudio.get(fingerprint);
@@ -526,7 +545,8 @@
     setStatus(panel, 'loading', '正在读取语音…');
     panel.dwellVoiceDiagnostic = null;
     try {
-      const audioPayload = await uniqueAudioFor(target);
+      const audioPayload = await uniqueAudioFor(target, !batchRunning && isFacebookPage
+        ? () => setStatus(panel, 'loading', '请点这条语音的播放键一次') : null);
       if (isFacebookPage && chrome.runtime.getManifest().name.startsWith('[TEST]')) {
         setStatus(panel, 'error', '已取得音频；诊断版未上传');
         panel.dwellVoiceDiagnostic = JSON.stringify({
@@ -698,7 +718,13 @@
 
   function isWhatsAppVoiceMessage(element) {
     if (!element.matches?.(WHATSAPP_MESSAGE_SELECTOR)) return false;
-    return Boolean(element.querySelector(WHATSAPP_VOICE_HINT_SELECTOR) && whatsappTransportFor(element));
+    const hint = element.querySelector(WHATSAPP_VOICE_HINT_SELECTOR);
+    const slider = element.querySelector('[role="slider"]');
+    if (!hint && (!slider || element.querySelector('video'))) return false;
+    const playback = whatsappTransportFor(element);
+    if (!playback) return false;
+    const label = playback.getAttribute('aria-label') || '';
+    return !/video|视频|影片/i.test(label);
   }
 
   function facebookVoiceGroup(element) {
@@ -717,7 +743,7 @@
     if (isWhatsAppPage && isWhatsAppVoiceMessage(root)) attach(root);
 
     if (isWhatsAppPage) {
-      root.querySelectorAll?.(WHATSAPP_VOICE_HINT_SELECTOR).forEach((hint) => {
+      root.querySelectorAll?.(WHATSAPP_SCAN_SELECTOR).forEach((hint) => {
         const message = hint.closest('div[role="row"]') ||
           hint.closest('[data-testid^="conv-msg-"]') || hint.closest('div[data-id]');
         if (message && isWhatsAppVoiceMessage(message)) attach(message);

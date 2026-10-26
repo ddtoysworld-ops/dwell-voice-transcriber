@@ -31,3 +31,35 @@ export function publicError(status, payload = {}) {
   return { status: 502, code: 'OPENAI_REQUEST_FAILED', error: '语音处理服务暂时不可用。' };
 }
 
+export function shouldRetryLegacyTranscription(status, payload = {}) {
+  return status === 400 && payload?.error?.param === 'file';
+}
+
+export function providerDiagnostic(stage, status, payload = {}, diagnosticId = '', file = null) {
+  const safeToken = (value) => typeof value === 'string' && /^[a-zA-Z0-9_.-]{1,80}$/.test(value)
+    ? value : null;
+  const parameter = payload?.error?.param;
+  const providerParam = ['file', 'model', 'response_format', 'language', 'prompt'].includes(parameter)
+    ? parameter : null;
+  const mime = String(file?.type || '').toLowerCase();
+  const providerFileType = ['audio/aac', 'audio/flac', 'audio/m4a', 'audio/mp4', 'audio/mpeg',
+    'audio/ogg', 'audio/opus', 'audio/wav', 'audio/webm'].includes(mime) ? mime : 'other';
+  const extension = String(file?.name || '').split('.').pop()?.toLowerCase();
+  const providerFileExtension = ['aac', 'flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga',
+    'ogg', 'opus', 'wav', 'webm'].includes(extension) ? extension : 'other';
+  const providerFileSizeKb = Number.isSafeInteger(file?.size) && file.size > 0
+    ? Math.ceil(file.size / 1024) : null;
+  return {
+    event: 'voice_provider_failure',
+    stage: stage === 'translation' ? 'translation' : 'transcription',
+    status: Number.isInteger(status) && status >= 400 && status <= 599 ? status : 0,
+    providerCode: safeToken(payload?.error?.code),
+    providerType: safeToken(payload?.error?.type),
+    providerParam,
+    providerFileType,
+    providerFileExtension,
+    providerFileSizeKb,
+    diagnosticId: safeToken(diagnosticId)
+  };
+}
+

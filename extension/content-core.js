@@ -35,7 +35,15 @@
   }
 
   function isVoicePlaybackLabel(value = '') {
-    return /^(?:play|pause) voice message$/i.test(String(value).trim());
+    const label = String(value).trim();
+    return /^(?:play|pause) voice message$/i.test(label) ||
+      /^(?:播放|暂停|暫停|继续|繼續).*(?:语音|語音)/.test(label);
+  }
+
+  function isPausedVoicePlaybackLabel(value = '') {
+    const label = String(value).trim();
+    return /^pause voice message$/i.test(label) ||
+      /^(?:暂停|暫停).*(?:语音|語音)/.test(label);
   }
 
   function isFacebookVoiceMessageLabel(value = '') {
@@ -82,6 +90,7 @@
     if (code === 'AUDIO_FETCH_TIMEOUT') return '读取失败 F3：语音服务器回应超时。';
     if (code === 'AUDIO_REDIRECT_UNSUPPORTED') return '读取失败 F4：语音跳转到未授权的域名。';
     if (code === 'INVALID_AUDIO_TYPE') return '取得的文件不是语音。';
+    if (code === 'AUDIO_CONVERSION_FAILED') return '这段 AAC 语音无法转换，请复制诊断联系管理员。';
     if (code === 'NO_API_CREDITS') return 'OpenAI API 暂无余额，请联系管理员充值。';
     return error?.message || '转写失败，请稍后再试。';
   }
@@ -109,6 +118,7 @@
     fileNameForAudio,
     isUsableAudioSource,
     isVoicePlaybackLabel,
+    isPausedVoicePlaybackLabel,
     isFacebookVoiceMessageLabel,
     isClearlyChineseText,
     diagnoseCapture,

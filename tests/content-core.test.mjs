@@ -10,6 +10,7 @@ const {
   isClearlyChineseText,
   isFacebookVoiceMessageLabel,
   isUsableAudioSource,
+  isPausedVoicePlaybackLabel,
   isVoicePlaybackLabel,
   normalizeMimeType,
   userFacingError
@@ -34,6 +35,10 @@ test('accepts only fetchable audio sources', () => {
 test('recognizes WhatsApp voice playback controls', () => {
   assert.equal(isVoicePlaybackLabel('Play voice message'), true);
   assert.equal(isVoicePlaybackLabel('Pause voice message'), true);
+  assert.equal(isVoicePlaybackLabel('播放语音消息'), true);
+  assert.equal(isVoicePlaybackLabel('暂停语音消息'), true);
+  assert.equal(isPausedVoicePlaybackLabel('暂停语音消息'), true);
+  assert.equal(isPausedVoicePlaybackLabel('播放语音消息'), false);
   assert.equal(isVoicePlaybackLabel('Voice message'), false);
   assert.equal(isVoicePlaybackLabel('Play video'), false);
 });
@@ -58,6 +63,7 @@ test('maps service errors to concise Chinese help', () => {
   assert.match(userFacingError({ code: 'AUDIO_NOT_READY', diagnostic: 'M1' }), /M1/);
   assert.match(userFacingError({ code: 'AUDIO_PERMISSION_REQUIRED' }), /F1/);
   assert.match(userFacingError({ code: 'AUDIO_FETCH_FAILED' }), /F2/);
+  assert.match(userFacingError({ code: 'AUDIO_CONVERSION_FAILED' }), /AAC/);
 });
 
 test('diagnoses capture stages without retaining audio or URLs', () => {

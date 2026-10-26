@@ -23,6 +23,9 @@
     const text = String.fromCharCode(...bytes);
     if (text.startsWith('OggS')) return { mimeType: 'audio/ogg', fileName: 'voice-message.ogg' };
     if (text.startsWith('RIFF') && text.slice(8, 12) === 'WAVE') return { mimeType: 'audio/wav', fileName: 'voice-message.wav' };
+    if (bytes[0] === 0xff && (bytes[1] & 0xf6) === 0xf0) {
+      return { mimeType: 'audio/aac', fileName: 'voice-message.aac' };
+    }
     if (text.startsWith('ID3') || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0)) {
       return { mimeType: 'audio/mpeg', fileName: 'voice-message.mp3' };
     }
@@ -174,7 +177,7 @@
       timeoutId: window.setTimeout(() => {
         window.clearTimeout(activeCapture?.networkTimer);
         activeCapture = null;
-      }, event.data.type === 'observe' ? 13000 : 7000)
+      }, event.data.type === 'observe' ? 13000 : Math.min(20000, Math.max(7000, Number(event.data.timeoutMs) || 7000)))
     };
     window.postMessage({ source: RESULT_SOURCE, type: 'armed', requestId }, '*');
   });
