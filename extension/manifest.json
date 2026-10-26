@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "D'WELL 语音转文字",
+  "version": "0.1.1",
+  "description": "将 WhatsApp 和 Messenger 语音转成文字，并按需显示中文翻译。",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "https://business.facebook.com/*",
+    "https://*.fbcdn.net/*",
+    "https://*.fbsbx.com/*",
+    "https://osgqzpdfjdnkzmyzitrm.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.mjs",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "D'WELL Voice Transcriber",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://web.whatsapp.com/*",
+        "https://business.facebook.com/*"
+      ],
+      "js": ["main-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://web.whatsapp.com/*",
+        "https://business.facebook.com/*"
+      ],
+      "js": ["content-core.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://osgqzpdfjdnkzmyzitrm.supabase.co https://cdn.fbsbx.com; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'"
+  }
+}
+

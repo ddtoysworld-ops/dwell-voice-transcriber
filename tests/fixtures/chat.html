@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voice message fixture</title>
+  <link rel="stylesheet" href="/extension/content.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #eef3f1; color: #17342c; font: 14px/1.45 system-ui, sans-serif; }
+    main { width: min(100%, 460px); min-height: 100vh; margin: 0 auto; padding: 24px 12px; background: #f8faf9; }
+    .message { width: 86%; margin-left: auto; padding: 12px; border-radius: 7px; background: #dff3e8; }
+    .message + .message { margin-top: 18px; }
+    .sender { margin: 0 0 8px; font-weight: 700; }
+    audio { display: block; width: 100%; height: 42px; }
+    .wa-player { display: flex; align-items: center; gap: 10px; min-height: 42px; }
+    .wa-progress { flex: 1; height: 4px; background: #8aa69b; }
+    .fb-player { display: flex; align-items: center; gap: 8px; min-height: 38px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="message">
+      <p class="sender">测试对话</p>
+      <audio controls preload="metadata" src="/tests/fixtures/synthetic-test.wav"></audio>
+    </div>
+    <div class="message" data-testid="conv-msg-test-voice">
+      <div data-testid="msg-container">
+        <p class="sender">WhatsApp 自定义播放器</p>
+        <div class="wa-player">
+          <button type="button" aria-label="Play voice message" data-test-audio="whatsapp">播放</button>
+          <div class="wa-progress" role="slider" aria-label="Voice note progress slider" aria-valuenow="0"></div>
+          <span>0:20</span>
+        </div>
+      </div>
+    </div>
+    <div class="message" role="row" data-id="detached-voice-message">
+      <div class="wa-player">
+        <button type="button" data-test-audio="whatsapp-detached"><span data-icon="play">播放</span></button>
+        <div class="wa-progress" role="slider" aria-valuenow="0"></div>
+        <span data-icon="ptt-status" aria-hidden="true"></span>
+        <span>0:05</span>
+      </div>
+    </div>
+    <div class="message">
+      <p class="sender">Facebook 自定义播放器</p>
+      <div class="fb-player">
+        <a href="#" role="button" aria-label="Voice Message" data-test-audio="facebook">0:03</a>
+        <span aria-hidden="true">
+          <a href="#" role="button" aria-label="Voice Message">0:03</a>
+        </span>
+      </div>
+    </div>
+    <div class="message">
+      <p class="sender">Facebook 网络播放器</p>
+      <div class="fb-player">
+        <a href="#" role="button" aria-label="Voice Message" data-test-audio="facebook-network">0:03</a>
+        <span aria-hidden="true"><a href="#" role="button" aria-label="Voice Message">0:03</a></span>
+      </div>
+    </div>
+    <div class="message">
+      <p class="sender">Facebook 无音频诊断</p>
+      <div class="fb-player">
+        <a href="#" role="button" aria-label="Voice Message" data-test-audio="facebook-silent">0:03</a>
+        <span aria-hidden="true"><a href="#" role="button" aria-label="Voice Message">0:03</a></span>
+      </div>
+    </div>
+  </main>
+  <script src="/extension/content-core.js"></script>
+  <script>
+    document.addEventListener('click', (event) => {
+      const control = event.target.closest('[data-test-audio]');
+      if (!control || document.querySelector(`audio[data-owner="${control.dataset.testAudio}"]`)) return;
+      event.preventDefault();
+      if (control.dataset.testAudio === 'facebook-silent') return;
+      if (control.dataset.testAudio === 'whatsapp-detached') {
+        window.detachedVoice = new Audio(window.detachedVoiceUrl);
+        window.detachedVoice.play();
+        return;
+      }
+      if (control.dataset.testAudio === 'facebook') {
+        fetch('/tests/fixtures/synthetic-test.wav')
+          .then((response) => response.blob())
+          .then((blob) => URL.createObjectURL(blob));
+        return;
+      }
+      if (control.dataset.testAudio === 'facebook-network') {
+        window.networkVoice = new Audio('https://scontent.xx.fbcdn.net/synthetic-voice.m4a');
+        window.networkVoice.play();
+        return;
+      }
+      if (control.dataset.testAudio === 'whatsapp') control.setAttribute('aria-label', 'Pause voice message');
+      const audio = document.createElement('audio');
+      audio.hidden = true;
+      audio.dataset.owner = control.dataset.testAudio;
+      audio.src = '/tests/fixtures/synthetic-test.wav';
+      document.body.append(audio);
+    }, true);
+  </script>
+  <script src="/extension/main-bridge.js"></script>
+  <script src="/extension/content.js"></script>
+</body>
+</html>
+

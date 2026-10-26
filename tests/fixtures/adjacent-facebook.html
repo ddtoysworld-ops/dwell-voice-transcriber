@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adjacent Messenger voice fixture</title>
+  <link rel="stylesheet" href="/extension/content.css">
+  <style>
+    body { margin: 0; font: 14px system-ui, sans-serif; }
+    main { box-sizing: border-box; width: 420px; max-width: 100%; margin: auto; padding: 16px; }
+    .message { margin-bottom: 24px; }
+    .fb-player { display: flex; align-items: center; min-height: 36px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="message">
+      <div class="fb-player">
+        <a href="#" role="button" aria-label="Voice Message" data-voice="upper">0:03</a>
+        <span><a href="#" role="button" aria-label="Voice Message">0:03</a></span>
+      </div>
+    </div>
+    <div class="message">
+      <div class="fb-player">
+        <a href="#" role="button" aria-label="Voice Message" data-voice="lower">0:05</a>
+        <span><a href="#" role="button" aria-label="Voice Message">0:05</a></span>
+      </div>
+    </div>
+  </main>
+  <script src="/extension/content-core.js"></script>
+  <script>
+    document.addEventListener('click', (event) => {
+      const control = event.target.closest('[data-voice]');
+      if (!control) return;
+      event.preventDefault();
+      let voice = control.dataset.voice;
+      if (voice === 'upper' && (window.staleFirstUpper || window.alwaysStaleUpper)) {
+        window.staleFirstUpper = false;
+        voice = 'lower';
+      }
+      const audio = new Audio(`https://cdn.fbsbx.com/${voice}.m4a`);
+      void audio.play();
+    }, true);
+  </script>
+  <script src="/extension/main-bridge.js"></script>
+  <script src="/extension/content.js"></script>
+</body>
+</html>

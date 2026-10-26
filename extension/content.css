@@ -1,0 +1,205 @@
+.dwell-voice-panel {
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: min(360px, calc(100% - 16px));
+  margin: 4px 0 6px;
+  padding: 5px 7px;
+  border: 1px solid #cbd8d2;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #17342c;
+  font: 13px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 1px 2px rgb(15 40 32 / 8%);
+}
+
+.dwell-voice-panel--incoming {
+  align-self: flex-start;
+  max-width: min(360px, calc(100% - 74px));
+  margin-left: 58px;
+}
+
+.dwell-voice-panel--outgoing {
+  align-self: flex-end;
+  max-width: min(360px, calc(100% - 74px));
+  margin-right: 58px;
+}
+
+.dwell-voice-panel[data-state="loading"],
+.dwell-voice-panel[data-state="error"],
+.dwell-voice-panel[data-state="done"] {
+  width: min(360px, calc(100% - 16px));
+}
+
+.dwell-voice-panel--incoming[data-state="loading"],
+.dwell-voice-panel--incoming[data-state="error"],
+.dwell-voice-panel--incoming[data-state="done"],
+.dwell-voice-panel--outgoing[data-state="loading"],
+.dwell-voice-panel--outgoing[data-state="error"],
+.dwell-voice-panel--outgoing[data-state="done"] {
+  width: min(360px, calc(100% - 74px));
+}
+
+.dwell-voice-panel[data-state="done"][data-collapsed="true"] {
+  width: fit-content;
+}
+
+.dwell-voice-toolbar,
+.dwell-voice-text-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dwell-voice-transcribe,
+.dwell-voice-batch,
+.dwell-voice-copy,
+.dwell-voice-diagnostic,
+.dwell-voice-observe,
+.dwell-voice-toggle {
+  border: 1px solid #28755e;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #176348;
+  cursor: pointer;
+  font: inherit;
+}
+
+.dwell-voice-transcribe {
+  min-height: 32px;
+  padding: 5px 10px;
+  font-weight: 650;
+}
+
+.dwell-voice-batch {
+  min-height: 32px;
+  padding: 5px 8px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.dwell-voice-toolbar:has(.dwell-voice-batch) {
+  flex-wrap: wrap;
+}
+
+.dwell-voice-copy {
+  min-height: 28px;
+  padding: 3px 8px;
+}
+
+.dwell-voice-diagnostic {
+  display: none;
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  font-size: 11px;
+}
+
+.dwell-voice-observe {
+  padding: 3px 6px;
+  font-size: 11px;
+}
+
+.dwell-voice-panel[data-state="loading"] .dwell-voice-observe {
+  display: none;
+}
+
+.dwell-voice-panel[data-state="error"] .dwell-voice-diagnostic,
+.dwell-voice-panel[data-state="diagnostic"] .dwell-voice-diagnostic {
+  display: inline-block;
+}
+
+.dwell-voice-panel[data-state="error"] .dwell-voice-toolbar,
+.dwell-voice-panel[data-state="diagnostic"] .dwell-voice-toolbar {
+  flex-wrap: wrap;
+}
+
+.dwell-voice-panel[data-state="error"] .dwell-voice-status,
+.dwell-voice-panel[data-state="diagnostic"] .dwell-voice-status {
+  flex: 1 1 120px;
+}
+
+.dwell-voice-panel[data-state="error"] .dwell-voice-diagnostic,
+.dwell-voice-panel[data-state="diagnostic"] .dwell-voice-diagnostic {
+  margin-left: auto;
+}
+
+.dwell-voice-toggle {
+  display: none;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.dwell-voice-panel[data-state="done"] .dwell-voice-toggle {
+  display: inline-grid;
+  place-items: center;
+}
+
+.dwell-voice-transcribe:hover,
+.dwell-voice-batch:hover,
+.dwell-voice-copy:hover {
+  background: #edf7f2;
+}
+
+.dwell-voice-diagnostic:hover,
+.dwell-voice-observe:hover {
+  background: #edf7f2;
+}
+
+.dwell-voice-toggle:hover {
+  background: #edf7f2;
+}
+
+.dwell-voice-transcribe:disabled,
+.dwell-voice-batch:disabled,
+.dwell-voice-observe:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.dwell-voice-status {
+  color: #687a74;
+  text-align: right;
+}
+
+.dwell-voice-status:empty {
+  display: none;
+}
+
+.dwell-voice-panel[data-state="error"] .dwell-voice-status {
+  color: #b42318;
+}
+
+.dwell-voice-panel[data-state="done"] .dwell-voice-status {
+  color: #176348;
+}
+
+.dwell-voice-result {
+  margin-top: 8px;
+  border-top: 1px solid #e1e8e5;
+}
+
+.dwell-voice-result[hidden] {
+  display: none;
+}
+
+.dwell-voice-text-block {
+  padding-top: 8px;
+}
+
+.dwell-voice-text-header {
+  color: #52645e;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.dwell-voice-text-block p {
+  margin: 5px 0 0;
+  color: #172f28;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+

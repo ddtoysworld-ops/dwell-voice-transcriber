@@ -1,0 +1,5 @@
+project_id = "dwell-voice-transcriber"
+
+[functions.dwell-voice-transcribe]
+verify_jwt = false
+
